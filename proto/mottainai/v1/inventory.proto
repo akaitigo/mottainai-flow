@@ -1,0 +1,263 @@
+// InventoryService manages supply and demand registration for surplus food.
+syntax = "proto3";
+
+package mottainai.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/akaitigo/mottainai-flow/gen/go/mottainai/v1;mottainaiv1";
+option java_multiple_files = true;
+option java_package = "com.mottainai.v1";
+
+// InventoryService handles registration and listing of food supply and demand.
+service InventoryService {
+  // RegisterSupply registers surplus food inventory from a provider.
+  rpc RegisterSupply(RegisterSupplyRequest) returns (RegisterSupplyResponse);
+
+  // RegisterDemand registers food demand from a recipient.
+  rpc RegisterDemand(RegisterDemandRequest) returns (RegisterDemandResponse);
+
+  // ListSupplies lists registered supplies with optional filters.
+  rpc ListSupplies(ListSuppliesRequest) returns (ListSuppliesResponse);
+
+  // ListDemands lists registered demands with optional filters.
+  rpc ListDemands(ListDemandsRequest) returns (ListDemandsResponse);
+}
+
+// FoodCategory represents the category of food items.
+enum FoodCategory {
+  // FOOD_CATEGORY_UNSPECIFIED is the default value.
+  FOOD_CATEGORY_UNSPECIFIED = 0;
+  // FOOD_CATEGORY_VEGETABLES represents fresh vegetables.
+  FOOD_CATEGORY_VEGETABLES = 1;
+  // FOOD_CATEGORY_FRUITS represents fresh fruits.
+  FOOD_CATEGORY_FRUITS = 2;
+  // FOOD_CATEGORY_DAIRY represents dairy products.
+  FOOD_CATEGORY_DAIRY = 3;
+  // FOOD_CATEGORY_MEAT represents meat products.
+  FOOD_CATEGORY_MEAT = 4;
+  // FOOD_CATEGORY_SEAFOOD represents seafood products.
+  FOOD_CATEGORY_SEAFOOD = 5;
+  // FOOD_CATEGORY_BREAD represents bread and bakery items.
+  FOOD_CATEGORY_BREAD = 6;
+  // FOOD_CATEGORY_PREPARED represents prepared/cooked meals.
+  FOOD_CATEGORY_PREPARED = 7;
+  // FOOD_CATEGORY_CANNED represents canned goods.
+  FOOD_CATEGORY_CANNED = 8;
+  // FOOD_CATEGORY_FROZEN represents frozen foods.
+  FOOD_CATEGORY_FROZEN = 9;
+  // FOOD_CATEGORY_OTHER represents other food items.
+  FOOD_CATEGORY_OTHER = 10;
+}
+
+// SupplyStatus represents the lifecycle status of a supply entry.
+enum SupplyStatus {
+  // SUPPLY_STATUS_UNSPECIFIED is the default value.
+  SUPPLY_STATUS_UNSPECIFIED = 0;
+  // SUPPLY_STATUS_AVAILABLE means the supply is available for matching.
+  SUPPLY_STATUS_AVAILABLE = 1;
+  // SUPPLY_STATUS_MATCHED means the supply has been matched with a demand.
+  SUPPLY_STATUS_MATCHED = 2;
+  // SUPPLY_STATUS_EXPIRED means the supply has expired.
+  SUPPLY_STATUS_EXPIRED = 3;
+  // SUPPLY_STATUS_CANCELLED means the supply was cancelled by the provider.
+  SUPPLY_STATUS_CANCELLED = 4;
+}
+
+// DemandStatus represents the lifecycle status of a demand entry.
+enum DemandStatus {
+  // DEMAND_STATUS_UNSPECIFIED is the default value.
+  DEMAND_STATUS_UNSPECIFIED = 0;
+  // DEMAND_STATUS_ACTIVE means the demand is actively seeking matches.
+  DEMAND_STATUS_ACTIVE = 1;
+  // DEMAND_STATUS_MATCHED means the demand has been fulfilled by a match.
+  DEMAND_STATUS_MATCHED = 2;
+  // DEMAND_STATUS_CANCELLED means the demand was cancelled by the recipient.
+  DEMAND_STATUS_CANCELLED = 3;
+}
+
+// TimeWindow represents an availability window for pickup or delivery.
+message TimeWindow {
+  // start is the beginning of the availability window.
+  google.protobuf.Timestamp start = 1;
+  // end is the end of the availability window.
+  google.protobuf.Timestamp end = 2;
+}
+
+// GeoLocation represents a geographic coordinate.
+message GeoLocation {
+  // latitude in decimal degrees.
+  double latitude = 1;
+  // longitude in decimal degrees.
+  double longitude = 2;
+}
+
+// Address represents a physical address with geocoded location.
+message Address {
+  // postal_code is the Japanese postal code (e.g., "100-0001").
+  string postal_code = 1;
+  // prefecture is the prefecture name (e.g., "東京都").
+  string prefecture = 2;
+  // city is the city/ward name (e.g., "千代田区").
+  string city = 3;
+  // street is the street address detail.
+  string street = 4;
+  // location is the geocoded coordinate. Set by the server.
+  GeoLocation location = 5;
+}
+
+// Supply represents a registered surplus food item.
+message Supply {
+  // id is the unique identifier.
+  string id = 1;
+  // provider_id is the ID of the provider who registered this supply.
+  string provider_id = 2;
+  // item_name is the name of the food item.
+  string item_name = 3;
+  // category is the food category.
+  FoodCategory category = 4;
+  // quantity is the available quantity.
+  int32 quantity = 5;
+  // unit is the unit of measurement (e.g., "kg", "個", "箱").
+  string unit = 6;
+  // expiry_date is the expiration date of the food item.
+  google.protobuf.Timestamp expiry_date = 7;
+  // pickup_window is the time window when the item can be picked up.
+  TimeWindow pickup_window = 8;
+  // address is the pickup address.
+  Address address = 9;
+  // status is the current status of this supply.
+  SupplyStatus status = 10;
+  // description is an optional description or notes.
+  string description = 11;
+  // created_at is the registration timestamp.
+  google.protobuf.Timestamp created_at = 12;
+  // updated_at is the last update timestamp.
+  google.protobuf.Timestamp updated_at = 13;
+}
+
+// Demand represents a registered food demand.
+message Demand {
+  // id is the unique identifier.
+  string id = 1;
+  // recipient_id is the ID of the recipient who registered this demand.
+  string recipient_id = 2;
+  // category is the desired food category.
+  FoodCategory category = 3;
+  // desired_quantity is the requested quantity.
+  int32 desired_quantity = 4;
+  // unit is the unit of measurement (e.g., "kg", "個", "箱").
+  string unit = 5;
+  // delivery_window is the time window when the item can be received.
+  TimeWindow delivery_window = 6;
+  // address is the delivery address.
+  Address address = 7;
+  // status is the current status of this demand.
+  DemandStatus status = 8;
+  // description is an optional description or notes.
+  string description = 9;
+  // created_at is the registration timestamp.
+  google.protobuf.Timestamp created_at = 10;
+  // updated_at is the last update timestamp.
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+// RegisterSupplyRequest is the request to register a new supply.
+message RegisterSupplyRequest {
+  // provider_id is the ID of the provider.
+  string provider_id = 1;
+  // item_name is the name of the food item. Max 200 characters.
+  string item_name = 2;
+  // category is the food category.
+  FoodCategory category = 3;
+  // quantity must be greater than 0.
+  int32 quantity = 4;
+  // unit is the unit of measurement. Max 20 characters.
+  string unit = 5;
+  // expiry_date must be in the future.
+  google.protobuf.Timestamp expiry_date = 6;
+  // pickup_window is the availability window for pickup.
+  TimeWindow pickup_window = 7;
+  // address is the pickup address.
+  Address address = 8;
+  // description is an optional description. Max 1000 characters.
+  string description = 9;
+}
+
+// RegisterSupplyResponse is the response after registering a supply.
+message RegisterSupplyResponse {
+  // supply is the registered supply with generated fields populated.
+  Supply supply = 1;
+}
+
+// RegisterDemandRequest is the request to register a new demand.
+message RegisterDemandRequest {
+  // recipient_id is the ID of the recipient.
+  string recipient_id = 1;
+  // category is the desired food category.
+  FoodCategory category = 2;
+  // desired_quantity must be greater than 0.
+  int32 desired_quantity = 3;
+  // unit is the unit of measurement. Max 20 characters.
+  string unit = 4;
+  // delivery_window is the availability window for delivery.
+  TimeWindow delivery_window = 5;
+  // address is the delivery address.
+  Address address = 6;
+  // description is an optional description. Max 1000 characters.
+  string description = 7;
+}
+
+// RegisterDemandResponse is the response after registering a demand.
+message RegisterDemandResponse {
+  // demand is the registered demand with generated fields populated.
+  Demand demand = 1;
+}
+
+// ListSuppliesRequest is the request to list supplies.
+message ListSuppliesRequest {
+  // provider_id filters by provider. Empty means all providers.
+  string provider_id = 1;
+  // category filters by food category. UNSPECIFIED means all categories.
+  FoodCategory category = 2;
+  // status filters by supply status. UNSPECIFIED means all statuses.
+  SupplyStatus status = 3;
+  // page_size is the maximum number of results. Default 20, max 100.
+  int32 page_size = 4;
+  // page_token is the pagination token from a previous response.
+  string page_token = 5;
+}
+
+// ListSuppliesResponse is the response containing supplies.
+message ListSuppliesResponse {
+  // supplies is the list of matching supplies.
+  repeated Supply supplies = 1;
+  // next_page_token is the token for the next page, empty if no more results.
+  string next_page_token = 2;
+  // total_count is the total number of matching supplies.
+  int32 total_count = 3;
+}
+
+// ListDemandsRequest is the request to list demands.
+message ListDemandsRequest {
+  // recipient_id filters by recipient. Empty means all recipients.
+  string recipient_id = 1;
+  // category filters by food category. UNSPECIFIED means all categories.
+  FoodCategory category = 2;
+  // status filters by demand status. UNSPECIFIED means all statuses.
+  DemandStatus status = 3;
+  // page_size is the maximum number of results. Default 20, max 100.
+  int32 page_size = 4;
+  // page_token is the pagination token from a previous response.
+  string page_token = 5;
+}
+
+// ListDemandsResponse is the response containing demands.
+message ListDemandsResponse {
+  // demands is the list of matching demands.
+  repeated Demand demands = 1;
+  // next_page_token is the token for the next page, empty if no more results.
+  string next_page_token = 2;
+  // total_count is the total number of matching demands.
+  int32 total_count = 3;
+}
