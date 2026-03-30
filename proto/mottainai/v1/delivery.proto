@@ -1,0 +1,163 @@
+// DeliveryService manages delivery confirmation and traceability.
+syntax = "proto3";
+
+package mottainai.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/akaitigo/mottainai-flow/gen/go/mottainai/v1;mottainaiv1";
+option java_multiple_files = true;
+option java_package = "com.mottainai.v1";
+
+// DeliveryService handles delivery confirmation and traceability reporting.
+service DeliveryService {
+  // ConfirmPickup records that a driver has picked up items from a provider.
+  rpc ConfirmPickup(ConfirmPickupRequest) returns (ConfirmPickupResponse);
+
+  // ConfirmDelivery records that items have been delivered to a recipient.
+  rpc ConfirmDelivery(ConfirmDeliveryRequest) returns (ConfirmDeliveryResponse);
+
+  // GetDeliveryStatus retrieves the current delivery status.
+  rpc GetDeliveryStatus(GetDeliveryStatusRequest) returns (GetDeliveryStatusResponse);
+
+  // GenerateTraceReport generates a traceability report for a delivery.
+  rpc GenerateTraceReport(GenerateTraceReportRequest) returns (GenerateTraceReportResponse);
+}
+
+// DeliveryStatus represents the lifecycle of a delivery.
+enum DeliveryStatus {
+  // DELIVERY_STATUS_UNSPECIFIED is the default value.
+  DELIVERY_STATUS_UNSPECIFIED = 0;
+  // DELIVERY_STATUS_PENDING means the delivery is waiting for pickup.
+  DELIVERY_STATUS_PENDING = 1;
+  // DELIVERY_STATUS_PICKED_UP means the driver has collected the items.
+  DELIVERY_STATUS_PICKED_UP = 2;
+  // DELIVERY_STATUS_DELIVERED means the items have been delivered.
+  DELIVERY_STATUS_DELIVERED = 3;
+  // DELIVERY_STATUS_FAILED means the delivery failed.
+  DELIVERY_STATUS_FAILED = 4;
+}
+
+// DeliveryRecord represents a complete delivery record.
+message DeliveryRecord {
+  // id is the unique delivery identifier.
+  string id = 1;
+  // match_id is the matching run that created this delivery.
+  string match_id = 2;
+  // supply_id is the supply entry ID.
+  string supply_id = 3;
+  // demand_id is the demand entry ID.
+  string demand_id = 4;
+  // driver_id is the assigned driver ID.
+  string driver_id = 5;
+  // status is the current delivery status.
+  DeliveryStatus status = 6;
+  // pickup_photo_url is the photo taken at pickup.
+  string pickup_photo_url = 7;
+  // delivery_photo_url is the photo taken at delivery.
+  string delivery_photo_url = 8;
+  // pickup_quantity is the confirmed quantity at pickup.
+  int32 pickup_quantity = 9;
+  // delivery_quantity is the confirmed quantity at delivery.
+  int32 delivery_quantity = 10;
+  // pickup_condition describes the item condition at pickup.
+  string pickup_condition = 11;
+  // delivery_condition describes the item condition at delivery.
+  string delivery_condition = 12;
+  // pickup_at is the timestamp of pickup confirmation.
+  google.protobuf.Timestamp pickup_at = 13;
+  // delivery_at is the timestamp of delivery confirmation.
+  google.protobuf.Timestamp delivery_at = 14;
+  // created_at is the record creation timestamp.
+  google.protobuf.Timestamp created_at = 15;
+  // updated_at is the last update timestamp.
+  google.protobuf.Timestamp updated_at = 16;
+  // notes is optional notes from the driver.
+  string notes = 17;
+}
+
+// ConfirmPickupRequest records a pickup confirmation.
+message ConfirmPickupRequest {
+  // delivery_id is the delivery to confirm pickup for.
+  string delivery_id = 1;
+  // driver_id is the driver confirming the pickup.
+  string driver_id = 2;
+  // photo_url is the URL of the pickup photo.
+  string photo_url = 3;
+  // quantity is the confirmed pickup quantity.
+  int32 quantity = 4;
+  // condition describes the item condition at pickup.
+  string condition = 5;
+  // notes is optional notes.
+  string notes = 6;
+}
+
+// ConfirmPickupResponse is the response after confirming pickup.
+message ConfirmPickupResponse {
+  // record is the updated delivery record.
+  DeliveryRecord record = 1;
+}
+
+// ConfirmDeliveryRequest records a delivery confirmation.
+message ConfirmDeliveryRequest {
+  // delivery_id is the delivery to confirm.
+  string delivery_id = 1;
+  // driver_id is the driver confirming the delivery.
+  string driver_id = 2;
+  // photo_url is the URL of the delivery photo.
+  string photo_url = 3;
+  // quantity is the confirmed delivery quantity.
+  int32 quantity = 4;
+  // condition describes the item condition at delivery.
+  string condition = 5;
+  // notes is optional notes.
+  string notes = 6;
+}
+
+// ConfirmDeliveryResponse is the response after confirming delivery.
+message ConfirmDeliveryResponse {
+  // record is the updated delivery record.
+  DeliveryRecord record = 1;
+}
+
+// GetDeliveryStatusRequest retrieves a delivery status.
+message GetDeliveryStatusRequest {
+  // delivery_id is the delivery to check.
+  string delivery_id = 1;
+}
+
+// GetDeliveryStatusResponse is the delivery status.
+message GetDeliveryStatusResponse {
+  // record is the delivery record.
+  DeliveryRecord record = 1;
+}
+
+// GenerateTraceReportRequest generates a traceability report.
+message GenerateTraceReportRequest {
+  // delivery_id is the delivery to generate a report for.
+  string delivery_id = 1;
+}
+
+// TraceEvent represents a single event in the delivery timeline.
+message TraceEvent {
+  // timestamp is when the event occurred.
+  google.protobuf.Timestamp timestamp = 1;
+  // event_type describes the type of event.
+  string event_type = 2;
+  // description is a human-readable description.
+  string description = 3;
+  // actor_id is the ID of the person who triggered the event.
+  string actor_id = 4;
+}
+
+// GenerateTraceReportResponse is the traceability report.
+message GenerateTraceReportResponse {
+  // delivery_id is the delivery ID.
+  string delivery_id = 1;
+  // record is the full delivery record.
+  DeliveryRecord record = 2;
+  // events is the ordered timeline of events.
+  repeated TraceEvent events = 3;
+  // generated_at is when the report was generated.
+  google.protobuf.Timestamp generated_at = 4;
+}
