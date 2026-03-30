@@ -1,0 +1,46 @@
+# === IDE ===
+.idea/
+.vscode/
+*.iml
+
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === Kotlin/JVM ===
+backend/build/
+backend/.gradle/
+backend/out/
+*.class
+*.jar
+
+# === Go ===
+routing/coverage.out
+
+# === TypeScript/Node ===
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/.cache/
+
+# === Environment ===
+.env
+.env.local
+.env.production
+.env.staging
+.env.development
+
+# === Secrets ===
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+secrets.yml
+secrets.yaml
+
+# === Claude ===
+CLAUDE.backup.md
+
+# === Docker ===
+docker-compose.override.yml

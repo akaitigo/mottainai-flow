@@ -1,0 +1,8 @@
+backend/build/
+backend/.gradle/
+backend/out/
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+*.class
+*.jar
