@@ -1,0 +1,89 @@
+// MatchingService matches food supply with demand based on multiple criteria.
+syntax = "proto3";
+
+package mottainai.v1;
+
+option go_package = "github.com/akaitigo/mottainai-flow/gen/go/mottainai/v1;mottainaiv1";
+option java_multiple_files = true;
+option java_package = "com.mottainai.v1";
+
+// MatchingService handles automatic matching of supply and demand entries.
+service MatchingService {
+  // RunMatching executes batch matching for unmatched supply and demand entries.
+  rpc RunMatching(RunMatchingRequest) returns (RunMatchingResponse);
+
+  // GetMatchResult retrieves the result of a matching run.
+  rpc GetMatchResult(GetMatchResultRequest) returns (GetMatchResultResponse);
+}
+
+// MatchStatus represents the status of a matching run.
+enum MatchStatus {
+  // MATCH_STATUS_UNSPECIFIED is the default value.
+  MATCH_STATUS_UNSPECIFIED = 0;
+  // MATCH_STATUS_PENDING means the matching is in progress.
+  MATCH_STATUS_PENDING = 1;
+  // MATCH_STATUS_COMPLETED means the matching is done.
+  MATCH_STATUS_COMPLETED = 2;
+  // MATCH_STATUS_FAILED means the matching failed.
+  MATCH_STATUS_FAILED = 3;
+}
+
+// MatchPair represents a matched supply-demand pair with scoring details.
+message MatchPair {
+  // supply_id is the matched supply entry ID.
+  string supply_id = 1;
+  // demand_id is the matched demand entry ID.
+  string demand_id = 2;
+  // distance_score is the distance-based score (0.0 to 1.0, higher is better).
+  double distance_score = 3;
+  // time_overlap_score is the time window overlap score (0.0 to 1.0).
+  double time_overlap_score = 4;
+  // category_score is the category match score (0.0 or 1.0).
+  double category_score = 5;
+  // total_score is the weighted total score.
+  double total_score = 6;
+  // distance_meters is the distance between supply and demand locations.
+  double distance_meters = 7;
+}
+
+// RunMatchingRequest is the request to run batch matching.
+message RunMatchingRequest {
+  // match_id is a client-provided identifier for this matching run.
+  string match_id = 1;
+  // max_distance_meters is the maximum distance for matching. Default 50000 (50 km).
+  double max_distance_meters = 2;
+  // min_score_threshold is the minimum total score to accept a match. Default 0.5.
+  double min_score_threshold = 3;
+}
+
+// RunMatchingResponse is the result of a matching run.
+message RunMatchingResponse {
+  // match_id is the identifier of this matching run.
+  string match_id = 1;
+  // status is the matching status.
+  MatchStatus status = 2;
+  // pairs are the matched supply-demand pairs, ordered by total_score descending.
+  repeated MatchPair pairs = 3;
+  // total_matched is the number of matches found.
+  int32 total_matched = 4;
+  // total_unmatched_supplies is the number of supplies without matches.
+  int32 total_unmatched_supplies = 5;
+  // total_unmatched_demands is the number of demands without matches.
+  int32 total_unmatched_demands = 6;
+}
+
+// GetMatchResultRequest retrieves a previous matching result.
+message GetMatchResultRequest {
+  // match_id is the identifier of the matching run.
+  string match_id = 1;
+}
+
+// GetMatchResultResponse is the result of a matching run.
+message GetMatchResultResponse {
+  // match_id is the identifier of the matching run.
+  string match_id = 1;
+  // status is the matching status.
+  MatchStatus status = 2;
+  // result is populated when status is COMPLETED.
+  RunMatchingResponse result = 3;
+}
