@@ -1,0 +1,109 @@
+// RoutingService computes optimal pickup routes using VRP solver.
+syntax = "proto3";
+
+package mottainai.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/akaitigo/mottainai-flow/gen/go/mottainai/v1;mottainaiv1";
+option java_multiple_files = true;
+option java_package = "com.mottainai.v1";
+
+// RoutingService handles route optimization for matched supply-demand pairs.
+service RoutingService {
+  // OptimizeRoute computes the optimal pickup route for a set of matched pairs.
+  rpc OptimizeRoute(OptimizeRouteRequest) returns (OptimizeRouteResponse);
+
+  // GetRouteStatus retrieves the status of a route computation.
+  rpc GetRouteStatus(GetRouteStatusRequest) returns (GetRouteStatusResponse);
+}
+
+// RouteStatus represents the lifecycle of a route computation.
+enum RouteStatus {
+  // ROUTE_STATUS_UNSPECIFIED is the default value.
+  ROUTE_STATUS_UNSPECIFIED = 0;
+  // ROUTE_STATUS_PENDING means the route is being computed.
+  ROUTE_STATUS_PENDING = 1;
+  // ROUTE_STATUS_COMPLETED means the route computation is done.
+  ROUTE_STATUS_COMPLETED = 2;
+  // ROUTE_STATUS_FAILED means the route computation failed.
+  ROUTE_STATUS_FAILED = 3;
+}
+
+// Waypoint represents a stop in the route.
+message Waypoint {
+  // id is the unique identifier of the supply or demand.
+  string id = 1;
+  // latitude in decimal degrees.
+  double latitude = 2;
+  // longitude in decimal degrees.
+  double longitude = 3;
+  // window_start is the start of the availability window.
+  google.protobuf.Timestamp window_start = 4;
+  // window_end is the end of the availability window.
+  google.protobuf.Timestamp window_end = 5;
+  // is_pickup indicates whether this is a pickup (true) or delivery (false).
+  bool is_pickup = 6;
+}
+
+// OptimizeRouteRequest is the request to compute an optimal route.
+message OptimizeRouteRequest {
+  // route_id is a client-provided unique identifier for this route computation.
+  string route_id = 1;
+  // depot is the starting/ending location for the vehicle.
+  Waypoint depot = 2;
+  // waypoints are the pickup and delivery locations.
+  repeated Waypoint waypoints = 3;
+  // vehicle_count is the number of available vehicles. Default 1.
+  int32 vehicle_count = 4;
+}
+
+// RouteSegment represents a leg of the optimized route.
+message RouteSegment {
+  // from is the starting waypoint of this segment.
+  Waypoint from = 1;
+  // to is the ending waypoint of this segment.
+  Waypoint to = 2;
+  // distance_meters is the distance of this segment in meters.
+  double distance_meters = 3;
+}
+
+// VehicleRoute represents the route assigned to a single vehicle.
+message VehicleRoute {
+  // vehicle_index is the 0-based index of the vehicle.
+  int32 vehicle_index = 1;
+  // segments are the ordered route segments.
+  repeated RouteSegment segments = 2;
+  // total_distance_meters is the total distance of this vehicle's route.
+  double total_distance_meters = 3;
+  // waypoint_order is the ordered list of waypoint IDs.
+  repeated string waypoint_order = 4;
+}
+
+// OptimizeRouteResponse is the result of a route optimization.
+message OptimizeRouteResponse {
+  // route_id is the identifier of the route computation.
+  string route_id = 1;
+  // status is the computation status.
+  RouteStatus status = 2;
+  // vehicle_routes are the optimized routes per vehicle.
+  repeated VehicleRoute vehicle_routes = 3;
+  // total_distance_meters is the sum of all vehicle routes.
+  double total_distance_meters = 4;
+}
+
+// GetRouteStatusRequest is the request to check route computation status.
+message GetRouteStatusRequest {
+  // route_id is the identifier of the route computation.
+  string route_id = 1;
+}
+
+// GetRouteStatusResponse is the status of a route computation.
+message GetRouteStatusResponse {
+  // route_id is the identifier of the route computation.
+  string route_id = 1;
+  // status is the computation status.
+  RouteStatus status = 2;
+  // result is populated when status is COMPLETED.
+  OptimizeRouteResponse result = 3;
+}
