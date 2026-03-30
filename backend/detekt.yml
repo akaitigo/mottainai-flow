@@ -1,0 +1,19 @@
+build:
+  maxIssues: 0
+
+complexity:
+  LongMethod:
+    threshold: 60
+  LongParameterList:
+    functionThreshold: 10
+    constructorThreshold: 10
+
+style:
+  MaxLineLength:
+    maxLineLength: 120
+  WildcardImport:
+    active: false
+
+naming:
+  FunctionNaming:
+    functionPattern: '[a-zA-Z][a-zA-Z0-9]*'
