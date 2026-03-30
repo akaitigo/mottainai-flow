@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: mottainai-db
+    environment:
+      POSTGRES_DB: ${MOTTAINAI_DB_NAME:-mottainai}
+      POSTGRES_USER: ${MOTTAINAI_DB_USER:-mottainai}
+      POSTGRES_PASSWORD: ${MOTTAINAI_DB_PASSWORD:-mottainai_dev}
+    ports:
+      - "${MOTTAINAI_DB_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${MOTTAINAI_DB_USER:-mottainai}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mottainai-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      MOTTAINAI_DB_URL: postgresql://postgres:5432/${MOTTAINAI_DB_NAME:-mottainai}
+      MOTTAINAI_DB_USER: ${MOTTAINAI_DB_USER:-mottainai}
+      MOTTAINAI_DB_PASSWORD: ${MOTTAINAI_DB_PASSWORD:-mottainai_dev}
+      QUARKUS_GRPC_SERVER_PORT: 9090
+    ports:
+      - "9090:9090"
+
+  routing:
+    build:
+      context: ./routing
+      dockerfile: Dockerfile
+    container_name: mottainai-routing
+    environment:
+      ROUTING_GRPC_PORT: "9091"
+    ports:
+      - "9091:9091"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mottainai-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres-data:
