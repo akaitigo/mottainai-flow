@@ -46,6 +46,14 @@ buf format -w     # フォーマット
 buf generate      # Go コード生成
 ```
 
+## 技術スタック
+
+- **Backend**: Kotlin / Quarkus (gRPC Server)
+- **Routing**: Go / OR-Tools (VRP ソルバー)
+- **Frontend**: TypeScript / React
+- **DB**: PostgreSQL + PostGIS
+- **Proto管理**: buf
+
 ## アーキテクチャ
 
 ```
