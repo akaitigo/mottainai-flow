@@ -22,6 +22,7 @@ frontend/node_modules/
 frontend/dist/
 frontend/coverage/
 frontend/.cache/
+*.tsbuildinfo
 
 # === Environment ===
 .env

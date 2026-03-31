@@ -10,7 +10,7 @@ build:
 	@echo "=== Build ==="
 	cd backend && ./gradlew build
 	cd routing && go build $(GOFLAGS) -ldflags "-s -w" ./...
-	cd frontend && npx tsc
+	cd frontend && npx tsc -b && npx vite build
 
 test:
 	@echo "=== Test ==="
