@@ -1,0 +1,80 @@
+import {
+  type Demand,
+  DemandStatus,
+  FoodCategory,
+  type Supply,
+  SupplyStatus,
+} from "../types/inventory";
+
+/** Static mock data for local development until gRPC-Web integration. */
+export const MOCK_SUPPLIES: readonly Supply[] = [
+  {
+    id: "s-001",
+    providerId: "provider-1",
+    itemName: "有機キャベツ",
+    category: FoodCategory.VEGETABLES,
+    quantity: 30,
+    unit: "kg",
+    expiryDate: "2026-04-05T00:00:00Z",
+    status: SupplyStatus.AVAILABLE,
+    description: "産地直送の有機キャベツ",
+    createdAt: "2026-03-30T10:00:00Z",
+  },
+  {
+    id: "s-002",
+    providerId: "provider-2",
+    itemName: "食パン (6枚切り)",
+    category: FoodCategory.BREAD,
+    quantity: 50,
+    unit: "袋",
+    expiryDate: "2026-04-03T00:00:00Z",
+    status: SupplyStatus.AVAILABLE,
+    description: "本日製造分の余剰",
+    createdAt: "2026-03-30T11:00:00Z",
+  },
+  {
+    id: "s-003",
+    providerId: "provider-1",
+    itemName: "冷凍コロッケ",
+    category: FoodCategory.FROZEN,
+    quantity: 100,
+    unit: "個",
+    expiryDate: "2026-06-30T00:00:00Z",
+    status: SupplyStatus.MATCHED,
+    description: "賞味期限間近の冷凍食品",
+    createdAt: "2026-03-29T09:00:00Z",
+  },
+];
+
+export const MOCK_DEMANDS: readonly Demand[] = [
+  {
+    id: "d-001",
+    recipientId: "recipient-1",
+    category: FoodCategory.VEGETABLES,
+    desiredQuantity: 20,
+    unit: "kg",
+    status: DemandStatus.ACTIVE,
+    description: "子ども食堂で使用する野菜",
+    createdAt: "2026-03-30T08:00:00Z",
+  },
+  {
+    id: "d-002",
+    recipientId: "recipient-2",
+    category: FoodCategory.BREAD,
+    desiredQuantity: 30,
+    unit: "袋",
+    status: DemandStatus.ACTIVE,
+    description: "フードバンク配布用",
+    createdAt: "2026-03-30T09:00:00Z",
+  },
+  {
+    id: "d-003",
+    recipientId: "recipient-1",
+    category: FoodCategory.FROZEN,
+    desiredQuantity: 50,
+    unit: "個",
+    status: DemandStatus.MATCHED,
+    description: "福祉施設の食材",
+    createdAt: "2026-03-29T14:00:00Z",
+  },
+];

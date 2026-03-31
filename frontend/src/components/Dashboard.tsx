@@ -1,0 +1,100 @@
+import {
+  DEMAND_STATUS_LABELS,
+  type DemandStatusValue,
+  FOOD_CATEGORY_LABELS,
+  type FoodCategoryValue,
+  SUPPLY_STATUS_LABELS,
+  type SupplyStatusValue,
+} from "../types/inventory";
+import { MOCK_DEMANDS, MOCK_SUPPLIES } from "./mockData";
+
+function categoryLabel(value: FoodCategoryValue): string {
+  return FOOD_CATEGORY_LABELS[value];
+}
+
+function supplyStatusLabel(value: SupplyStatusValue): string {
+  return SUPPLY_STATUS_LABELS[value];
+}
+
+function demandStatusLabel(value: DemandStatusValue): string {
+  return DEMAND_STATUS_LABELS[value];
+}
+
+export function Dashboard() {
+  return (
+    <div>
+      <section style={{ marginBottom: "2rem" }}>
+        <h2>提供一覧 (Supply)</h2>
+        <table
+          style={{ width: "100%", borderCollapse: "collapse" }}
+          aria-label="提供一覧"
+        >
+          <thead>
+            <tr>
+              <th style={thStyle}>品名</th>
+              <th style={thStyle}>カテゴリ</th>
+              <th style={thStyle}>数量</th>
+              <th style={thStyle}>消費期限</th>
+              <th style={thStyle}>ステータス</th>
+            </tr>
+          </thead>
+          <tbody>
+            {MOCK_SUPPLIES.map((s) => (
+              <tr key={s.id}>
+                <td style={tdStyle}>{s.itemName}</td>
+                <td style={tdStyle}>{categoryLabel(s.category)}</td>
+                <td style={tdStyle}>
+                  {s.quantity} {s.unit}
+                </td>
+                <td style={tdStyle}>
+                  {new Date(s.expiryDate).toLocaleDateString("ja-JP")}
+                </td>
+                <td style={tdStyle}>{supplyStatusLabel(s.status)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>需要一覧 (Demand)</h2>
+        <table
+          style={{ width: "100%", borderCollapse: "collapse" }}
+          aria-label="需要一覧"
+        >
+          <thead>
+            <tr>
+              <th style={thStyle}>カテゴリ</th>
+              <th style={thStyle}>希望数量</th>
+              <th style={thStyle}>ステータス</th>
+              <th style={thStyle}>説明</th>
+            </tr>
+          </thead>
+          <tbody>
+            {MOCK_DEMANDS.map((d) => (
+              <tr key={d.id}>
+                <td style={tdStyle}>{categoryLabel(d.category)}</td>
+                <td style={tdStyle}>
+                  {d.desiredQuantity} {d.unit}
+                </td>
+                <td style={tdStyle}>{demandStatusLabel(d.status)}</td>
+                <td style={tdStyle}>{d.description}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+    </div>
+  );
+}
+
+const thStyle: React.CSSProperties = {
+  textAlign: "left",
+  borderBottom: "2px solid #333",
+  padding: "0.5rem",
+};
+
+const tdStyle: React.CSSProperties = {
+  borderBottom: "1px solid #ddd",
+  padding: "0.5rem",
+};
