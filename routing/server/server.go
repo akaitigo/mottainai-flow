@@ -83,7 +83,7 @@ func (s *RoutingServer) OptimizeRoute(
 
 	solution := s.solver.Solve(depot, waypoints, vehicleCount)
 
-	resp := buildResponse(req.GetRouteId(), solution, depot, waypoints)
+	resp := buildResponse(req.GetRouteId(), solution, depot)
 
 	s.mu.Lock()
 	s.routes[req.GetRouteId()] = resp
@@ -123,14 +123,8 @@ func buildResponse(
 	routeID string,
 	solution solver.Solution,
 	depot solver.Point,
-	allWaypoints []solver.Point,
 ) *pb.OptimizeRouteResponse {
 	vehicleRoutes := make([]*pb.VehicleRoute, len(solution.Routes))
-
-	waypointMap := make(map[string]solver.Point, len(allWaypoints))
-	for _, wp := range allWaypoints {
-		waypointMap[wp.ID] = wp
-	}
 
 	for i, route := range solution.Routes {
 		segments := buildSegments(depot, route.Points)
