@@ -39,9 +39,21 @@ func NewSolver() Solver {
 	return &NearestNeighborSolver{}
 }
 
+const (
+	// MaxWaypoints is the defensive upper bound on waypoints the solver will accept.
+	MaxWaypoints = 50
+)
+
 // Solve computes an optimized route using Nearest Neighbor heuristic
 // followed by 2-opt improvement.
 func (s *NearestNeighborSolver) Solve(depot Point, waypoints []Point, vehicleCount int) Solution {
+	if len(waypoints) > MaxWaypoints {
+		return Solution{
+			Routes:        []Route{{VehicleIndex: 0, Points: nil, TotalDistance: 0}},
+			TotalDistance: 0,
+		}
+	}
+
 	if len(waypoints) == 0 {
 		return Solution{
 			Routes:        []Route{{VehicleIndex: 0, Points: []Point{depot}, TotalDistance: 0}},

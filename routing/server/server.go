@@ -18,6 +18,12 @@ import (
 	pb "github.com/akaitigo/mottainai-flow/gen/go/mottainai/v1"
 )
 
+const (
+	// MaxWaypoints is the maximum number of waypoints allowed per route optimization request.
+	// Exceeding this limit results in InvalidArgument to prevent computational DoS.
+	MaxWaypoints = 50
+)
+
 // RoutingServer implements the RoutingService gRPC interface.
 type RoutingServer struct {
 	pb.UnimplementedRoutingServiceServer
@@ -47,6 +53,10 @@ func (s *RoutingServer) OptimizeRoute(
 	}
 	if len(req.GetWaypoints()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "at least one waypoint is required")
+	}
+	if len(req.GetWaypoints()) > MaxWaypoints {
+		return nil, status.Errorf(codes.InvalidArgument,
+			"waypoint count %d exceeds maximum of %d", len(req.GetWaypoints()), MaxWaypoints)
 	}
 
 	depot := solver.Point{
