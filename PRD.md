@@ -64,6 +64,21 @@
 - MVP で 10 提供者、5 受取者が登録し、月 20 回の配送が成立すること
 - 手動調整と比較して配送ルート提案の所要時間を 80% 削減
 
+## Phase 2: PostgreSQL 移行
+
+MVP ではインメモリストア（ConcurrentHashMap）を使用しているため、サーバー再起動でデータがリセットされる。
+Phase 2 では以下を実施し、永続化を完了する。
+
+- [ ] InMemorySupplyRepository を PostgreSQL 対応に置換
+- [ ] InMemoryDemandRepository を PostgreSQL 対応に置換
+- [ ] DeliveryServiceImpl のインメモリ管理を PostgreSQL 対応に置換
+- [ ] MatchingServiceImpl のインメモリ管理を PostgreSQL 対応に置換
+- [ ] Quarkus Hibernate + Panache / JDBC でリポジトリ層を実装
+- [ ] `db/init/002_schema.sql` との整合性を検証
+- [ ] テストを DB 接続前提（Testcontainers）に移行
+
+スキーマは `db/init/002_schema.sql` に定義済み。
+
 ## スコープ外（MVP）
 
 - 決済機能
