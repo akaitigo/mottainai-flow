@@ -2,6 +2,13 @@
 
 余剰食品の最適配車プラットフォーム。スーパー・農家・食品メーカーの余剰在庫をフードバンク・子ども食堂へ最適ルートで配送する。
 
+## 既知の制約（MVP）
+
+現在の MVP 版では、Supply / Demand / Delivery / Matching の各サービスが ConcurrentHashMap ベースのインメモリストアを使用しています。
+そのため **サーバー再起動でデータがリセット** されます。
+PostgreSQL スキーマは `db/init/002_schema.sql` に定義済みですが、アプリケーションからはまだ接続していません。
+DB 移行は Phase 2 で対応予定です（[PRD 参照](PRD.md#phase-2-postgresql-移行)）。
+
 ## Quick Start
 
 ### 前提条件
