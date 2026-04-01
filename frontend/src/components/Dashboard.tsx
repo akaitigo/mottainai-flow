@@ -1,12 +1,15 @@
+import { useEffect, useState } from "react";
+import { createInventoryApi } from "../api/createInventoryApi";
 import {
   DEMAND_STATUS_LABELS,
+  type Demand,
   type DemandStatusValue,
   FOOD_CATEGORY_LABELS,
   type FoodCategoryValue,
   SUPPLY_STATUS_LABELS,
+  type Supply,
   type SupplyStatusValue,
 } from "../types/inventory";
-import { MOCK_DEMANDS, MOCK_SUPPLIES } from "./mockData";
 
 function categoryLabel(value: FoodCategoryValue): string {
   return FOOD_CATEGORY_LABELS[value];
@@ -20,7 +23,55 @@ function demandStatusLabel(value: DemandStatusValue): string {
   return DEMAND_STATUS_LABELS[value];
 }
 
+const api = createInventoryApi();
+
 export function Dashboard() {
+  const [supplies, setSupplies] = useState<readonly Supply[]>([]);
+  const [demands, setDemands] = useState<readonly Demand[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchData() {
+      try {
+        const [suppliesResult, demandsResult] = await Promise.all([
+          api.listSupplies(),
+          api.listDemands(),
+        ]);
+        if (!cancelled) {
+          setSupplies(suppliesResult.supplies);
+          setDemands(demandsResult.demands);
+        }
+      } catch (err: unknown) {
+        if (!cancelled) {
+          const message =
+            err instanceof Error ? err.message : "Failed to fetch data";
+          setError(message);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (loading) {
+    return <p>Loading...</p>;
+  }
+
+  if (error !== null) {
+    return <p role="alert">Error: {error}</p>;
+  }
+
   return (
     <div>
       <section style={{ marginBottom: "2rem" }}>
@@ -39,7 +90,7 @@ export function Dashboard() {
             </tr>
           </thead>
           <tbody>
-            {MOCK_SUPPLIES.map((s) => (
+            {supplies.map((s) => (
               <tr key={s.id}>
                 <td style={tdStyle}>{s.itemName}</td>
                 <td style={tdStyle}>{categoryLabel(s.category)}</td>
@@ -71,7 +122,7 @@ export function Dashboard() {
             </tr>
           </thead>
           <tbody>
-            {MOCK_DEMANDS.map((d) => (
+            {demands.map((d) => (
               <tr key={d.id}>
                 <td style={tdStyle}>{categoryLabel(d.category)}</td>
                 <td style={tdStyle}>
