@@ -27,10 +27,15 @@ dependencies {
     implementation("io.grpc:grpc-kotlin-stub:1.4.1")
     implementation("io.grpc:grpc-protobuf:1.64.0")
     implementation("com.google.protobuf:protobuf-kotlin:3.25.5")
+    implementation("com.google.protobuf:protobuf-java-util:3.25.5")
+
+    implementation("io.quarkus:quarkus-narayana-jta")
 
     testImplementation("io.quarkus:quarkus-junit5")
     testImplementation("org.assertj:assertj-core:3.26.3")
     testImplementation("io.mockk:mockk:1.13.13")
+    testImplementation("io.quarkus:quarkus-jdbc-h2")
+    testImplementation("io.quarkus:quarkus-test-h2")
 }
 
 group = "com.mottainai"

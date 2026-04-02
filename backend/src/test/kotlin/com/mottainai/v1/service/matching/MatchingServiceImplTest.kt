@@ -2,8 +2,6 @@ package com.mottainai.v1.service.matching
 
 import com.mottainai.v1.model.DemandEntity
 import com.mottainai.v1.model.SupplyEntity
-import com.mottainai.v1.repository.InMemoryDemandRepository
-import com.mottainai.v1.repository.InMemorySupplyRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -12,15 +10,11 @@ import java.time.temporal.ChronoUnit
 
 class MatchingServiceImplTest {
     private lateinit var service: MatchingServiceImpl
-    private lateinit var supplyRepo: InMemorySupplyRepository
-    private lateinit var demandRepo: InMemoryDemandRepository
 
     private val baseTime = Instant.parse("2026-04-01T09:00:00Z")
 
     @BeforeEach
     fun setup() {
-        supplyRepo = InMemorySupplyRepository()
-        demandRepo = InMemoryDemandRepository()
         service = MatchingServiceImpl()
     }
 
@@ -28,49 +22,43 @@ class MatchingServiceImplTest {
         category: Int = 2,
         lat: Double = 35.6812,
         lon: Double = 139.7671,
-    ): SupplyEntity {
-        val entity =
-            SupplyEntity(
-                providerId = "p1",
-                itemName = "りんご",
-                category = category,
-                quantity = 10,
-                unit = "kg",
-                expiryDate = baseTime.plus(7, ChronoUnit.DAYS),
-                pickupWindowStart = baseTime,
-                pickupWindowEnd = baseTime.plus(4, ChronoUnit.HOURS),
-                postalCode = "100-0001",
-                prefecture = "東京都",
-                city = "千代田区",
-                street = "丸の内",
-                latitude = lat,
-                longitude = lon,
-            )
-        return supplyRepo.insert(entity)
-    }
+    ): SupplyEntity =
+        SupplyEntity(
+            providerId = "p1",
+            itemName = "りんご",
+            category = category,
+            quantity = 10,
+            unit = "kg",
+            expiryDate = baseTime.plus(7, ChronoUnit.DAYS),
+            pickupWindowStart = baseTime,
+            pickupWindowEnd = baseTime.plus(4, ChronoUnit.HOURS),
+            postalCode = "100-0001",
+            prefecture = "東京都",
+            city = "千代田区",
+            street = "丸の内",
+            latitude = lat,
+            longitude = lon,
+        )
 
     private fun createDemand(
         category: Int = 2,
         lat: Double = 35.6940,
         lon: Double = 139.7536,
-    ): DemandEntity {
-        val entity =
-            DemandEntity(
-                recipientId = "r1",
-                category = category,
-                desiredQuantity = 5,
-                unit = "kg",
-                deliveryWindowStart = baseTime,
-                deliveryWindowEnd = baseTime.plus(4, ChronoUnit.HOURS),
-                postalCode = "100-0002",
-                prefecture = "東京都",
-                city = "千代田区",
-                street = "神田",
-                latitude = lat,
-                longitude = lon,
-            )
-        return demandRepo.insert(entity)
-    }
+    ): DemandEntity =
+        DemandEntity(
+            recipientId = "r1",
+            category = category,
+            desiredQuantity = 5,
+            unit = "kg",
+            deliveryWindowStart = baseTime,
+            deliveryWindowEnd = baseTime.plus(4, ChronoUnit.HOURS),
+            postalCode = "100-0002",
+            prefecture = "東京都",
+            city = "千代田区",
+            street = "神田",
+            latitude = lat,
+            longitude = lon,
+        )
 
     @Test
     fun `findMatches returns matches for nearby same-category items`() {

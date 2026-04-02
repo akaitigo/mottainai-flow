@@ -10,70 +10,67 @@ import com.mottainai.v1.GenerateTraceReportRequest
 import com.mottainai.v1.GenerateTraceReportResponse
 import com.mottainai.v1.GetDeliveryStatusRequest
 import com.mottainai.v1.GetDeliveryStatusResponse
+import com.mottainai.v1.repository.DeliveryRepository
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
 import io.quarkus.grpc.GrpcService
+import jakarta.inject.Inject
+import jakarta.transaction.Transactional
 import java.time.Instant
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * gRPC service implementation for DeliveryService.
  * Manages delivery confirmations and traceability reports.
+ * Uses PostgreSQL-backed DeliveryRepository for persistence.
  */
 @GrpcService
 class DeliveryServiceImpl : DeliveryServiceGrpcKt.DeliveryServiceCoroutineImplBase() {
-    private val deliveries = ConcurrentHashMap<String, DeliveryEntity>()
-    private val transitionLock = Any()
+    @Inject
+    lateinit var deliveryRepository: DeliveryRepository
 
+    @Transactional
     override suspend fun confirmPickup(request: ConfirmPickupRequest): ConfirmPickupResponse {
         validateRequired(request.deliveryId, "delivery_id")
         validateRequired(request.driverId, "driver_id")
 
-        val updated =
-            synchronized(transitionLock) {
-                val entity = getDelivery(request.deliveryId)
-                requireTransition(entity.status, DeliveryStatus.DELIVERY_STATUS_PICKED_UP)
+        val entity = getDelivery(request.deliveryId)
+        requireTransition(entity.status, DeliveryStatus.DELIVERY_STATUS_PICKED_UP)
 
-                val result =
-                    entity.copy(
-                        driverId = request.driverId,
-                        status = DeliveryStatus.DELIVERY_STATUS_PICKED_UP,
-                        pickupPhotoUrl = request.photoUrl,
-                        pickupQuantity = request.quantity,
-                        pickupCondition = request.condition,
-                        pickupAt = Instant.now(),
-                        notes = request.notes,
-                        updatedAt = Instant.now(),
-                    )
-                deliveries[result.id.toString()] = result
-                result
-            }
+        val updated =
+            entity.copy(
+                driverId = request.driverId,
+                status = DeliveryStatus.DELIVERY_STATUS_PICKED_UP,
+                pickupPhotoUrl = request.photoUrl,
+                pickupQuantity = request.quantity,
+                pickupCondition = request.condition,
+                pickupAt = Instant.now(),
+                notes = request.notes,
+                updatedAt = Instant.now(),
+            )
+        deliveryRepository.update(updated)
 
         return ConfirmPickupResponse.newBuilder().setRecord(DeliveryMapper.toProto(updated)).build()
     }
 
+    @Transactional
     override suspend fun confirmDelivery(request: ConfirmDeliveryRequest): ConfirmDeliveryResponse {
         validateRequired(request.deliveryId, "delivery_id")
         validateRequired(request.driverId, "driver_id")
 
-        val updated =
-            synchronized(transitionLock) {
-                val entity = getDelivery(request.deliveryId)
-                requireTransition(entity.status, DeliveryStatus.DELIVERY_STATUS_DELIVERED)
+        val entity = getDelivery(request.deliveryId)
+        requireTransition(entity.status, DeliveryStatus.DELIVERY_STATUS_DELIVERED)
 
-                val result =
-                    entity.copy(
-                        status = DeliveryStatus.DELIVERY_STATUS_DELIVERED,
-                        deliveryPhotoUrl = request.photoUrl,
-                        deliveryQuantity = request.quantity,
-                        deliveryCondition = request.condition,
-                        deliveryAt = Instant.now(),
-                        notes = request.notes,
-                        updatedAt = Instant.now(),
-                    )
-                deliveries[result.id.toString()] = result
-                result
-            }
+        val updated =
+            entity.copy(
+                status = DeliveryStatus.DELIVERY_STATUS_DELIVERED,
+                deliveryPhotoUrl = request.photoUrl,
+                deliveryQuantity = request.quantity,
+                deliveryCondition = request.condition,
+                deliveryAt = Instant.now(),
+                notes = request.notes,
+                updatedAt = Instant.now(),
+            )
+        deliveryRepository.update(updated)
 
         return ConfirmDeliveryResponse.newBuilder().setRecord(DeliveryMapper.toProto(updated)).build()
     }
@@ -99,18 +96,19 @@ class DeliveryServiceImpl : DeliveryServiceGrpcKt.DeliveryServiceCoroutineImplBa
             .build()
     }
 
+    @Transactional
     fun createDelivery(
         matchId: String,
         supplyId: String,
         demandId: String,
     ): DeliveryEntity {
         val entity = DeliveryEntity(matchId = matchId, supplyId = supplyId, demandId = demandId)
-        deliveries[entity.id.toString()] = entity
+        deliveryRepository.insert(entity)
         return entity
     }
 
     private fun getDelivery(deliveryId: String): DeliveryEntity =
-        deliveries[deliveryId]
+        deliveryRepository.findById(deliveryId)
             ?: throw StatusRuntimeException(Status.NOT_FOUND.withDescription("Delivery $deliveryId not found"))
 
     private fun requireTransition(

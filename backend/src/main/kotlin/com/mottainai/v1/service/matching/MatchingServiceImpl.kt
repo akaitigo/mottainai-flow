@@ -10,17 +10,19 @@ import com.mottainai.v1.RunMatchingResponse
 import com.mottainai.v1.model.DemandEntity
 import com.mottainai.v1.model.SupplyEntity
 import com.mottainai.v1.repository.DemandRepository
+import com.mottainai.v1.repository.MatchingRepository
 import com.mottainai.v1.repository.SupplyRepository
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
 import io.quarkus.grpc.GrpcService
 import jakarta.inject.Inject
-import java.util.concurrent.ConcurrentHashMap
+import jakarta.transaction.Transactional
 
 /**
  * gRPC service implementation for MatchingService.
  * Matches available supplies with active demands based on distance,
  * time window overlap, and food category.
+ * Uses PostgreSQL-backed MatchingRepository for persistence.
  */
 @GrpcService
 class MatchingServiceImpl : MatchingServiceGrpcKt.MatchingServiceCoroutineImplBase() {
@@ -30,8 +32,10 @@ class MatchingServiceImpl : MatchingServiceGrpcKt.MatchingServiceCoroutineImplBa
     @Inject
     lateinit var demandRepository: DemandRepository
 
-    private val matchResults = ConcurrentHashMap<String, RunMatchingResponse>()
+    @Inject
+    lateinit var matchingRepository: MatchingRepository
 
+    @Transactional
     override suspend fun runMatching(request: RunMatchingRequest): RunMatchingResponse {
         if (request.matchId.isBlank()) {
             throw StatusRuntimeException(
@@ -87,7 +91,7 @@ class MatchingServiceImpl : MatchingServiceGrpcKt.MatchingServiceCoroutineImplBa
                 .setTotalUnmatchedDemands(demands.size - matchedDemandIds.size)
                 .build()
 
-        matchResults[request.matchId] = response
+        matchingRepository.save(request.matchId, response)
         return response
     }
 
@@ -98,7 +102,7 @@ class MatchingServiceImpl : MatchingServiceGrpcKt.MatchingServiceCoroutineImplBa
             )
         }
 
-        val result = matchResults[request.matchId]
+        val result = matchingRepository.findById(request.matchId)
 
         return if (result != null) {
             GetMatchResultResponse

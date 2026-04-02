@@ -1,6 +1,10 @@
 package com.mottainai.v1.service.delivery
 
 import com.mottainai.v1.DeliveryStatus
+import com.mottainai.v1.repository.DeliveryRepository
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.slot
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -8,16 +12,25 @@ import org.junit.jupiter.api.Test
 
 class DeliveryServiceImplTest {
     private lateinit var service: DeliveryServiceImpl
+    private lateinit var deliveryRepository: DeliveryRepository
 
     @BeforeEach
     fun setup() {
+        deliveryRepository = mockk()
         service = DeliveryServiceImpl()
+        // Inject mock via reflection (field injection pattern)
+        val field = DeliveryServiceImpl::class.java.getDeclaredField("deliveryRepository")
+        field.isAccessible = true
+        field.set(service, deliveryRepository)
     }
 
     @Nested
     inner class CreateDelivery {
         @Test
         fun `creates delivery with PENDING status`() {
+            val entitySlot = slot<DeliveryEntity>()
+            every { deliveryRepository.insert(capture(entitySlot)) } answers { entitySlot.captured }
+
             val entity = service.createDelivery("match-1", "supply-1", "demand-1")
 
             assertThat(entity.matchId).isEqualTo("match-1")
@@ -34,6 +47,9 @@ class DeliveryServiceImplTest {
     inner class FullLifecycle {
         @Test
         fun `complete delivery lifecycle PENDING to PICKED_UP to DELIVERED`() {
+            val entitySlot = slot<DeliveryEntity>()
+            every { deliveryRepository.insert(capture(entitySlot)) } answers { entitySlot.captured }
+
             val delivery = service.createDelivery("match-1", "supply-1", "demand-1")
 
             // Verify initial state
@@ -112,9 +128,12 @@ class DeliveryServiceImplTest {
     }
 
     @Nested
-    inner class DeliveryEntity {
+    inner class DeliveryEntityTest {
         @Test
         fun `entity preserves all fields`() {
+            val entitySlot = slot<DeliveryEntity>()
+            every { deliveryRepository.insert(capture(entitySlot)) } answers { entitySlot.captured }
+
             val entity = service.createDelivery("m1", "s1", "d1")
 
             assertThat(entity.id).isNotNull()
