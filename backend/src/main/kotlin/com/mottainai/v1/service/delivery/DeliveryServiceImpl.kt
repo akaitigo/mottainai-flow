@@ -17,6 +17,7 @@ import io.quarkus.grpc.GrpcService
 import jakarta.inject.Inject
 import jakarta.transaction.Transactional
 import java.time.Instant
+import java.util.UUID
 
 /**
  * gRPC service implementation for DeliveryService.
@@ -32,6 +33,7 @@ class DeliveryServiceImpl : DeliveryServiceGrpcKt.DeliveryServiceCoroutineImplBa
     override suspend fun confirmPickup(request: ConfirmPickupRequest): ConfirmPickupResponse {
         validateRequired(request.deliveryId, "delivery_id")
         validateRequired(request.driverId, "driver_id")
+        validateUUID(request.deliveryId, "delivery_id")
 
         val entity = getDelivery(request.deliveryId)
         requireTransition(entity.status, DeliveryStatus.DELIVERY_STATUS_PICKED_UP)
@@ -56,8 +58,19 @@ class DeliveryServiceImpl : DeliveryServiceGrpcKt.DeliveryServiceCoroutineImplBa
     override suspend fun confirmDelivery(request: ConfirmDeliveryRequest): ConfirmDeliveryResponse {
         validateRequired(request.deliveryId, "delivery_id")
         validateRequired(request.driverId, "driver_id")
+        validateUUID(request.deliveryId, "delivery_id")
 
         val entity = getDelivery(request.deliveryId)
+
+        // Verify that the requesting driver matches the one who picked up
+        if (entity.driverId.isNotBlank() && entity.driverId != request.driverId) {
+            throw StatusRuntimeException(
+                Status.PERMISSION_DENIED.withDescription(
+                    "driver_id mismatch: delivery was picked up by ${entity.driverId}",
+                ),
+            )
+        }
+
         requireTransition(entity.status, DeliveryStatus.DELIVERY_STATUS_DELIVERED)
 
         val updated =
@@ -77,6 +90,7 @@ class DeliveryServiceImpl : DeliveryServiceGrpcKt.DeliveryServiceCoroutineImplBa
 
     override suspend fun getDeliveryStatus(request: GetDeliveryStatusRequest): GetDeliveryStatusResponse {
         validateRequired(request.deliveryId, "delivery_id")
+        validateUUID(request.deliveryId, "delivery_id")
         return GetDeliveryStatusResponse
             .newBuilder()
             .setRecord(DeliveryMapper.toProto(getDelivery(request.deliveryId)))
@@ -85,6 +99,7 @@ class DeliveryServiceImpl : DeliveryServiceGrpcKt.DeliveryServiceCoroutineImplBa
 
     override suspend fun generateTraceReport(request: GenerateTraceReportRequest): GenerateTraceReportResponse {
         validateRequired(request.deliveryId, "delivery_id")
+        validateUUID(request.deliveryId, "delivery_id")
         val entity = getDelivery(request.deliveryId)
 
         return GenerateTraceReportResponse
@@ -131,6 +146,19 @@ class DeliveryServiceImpl : DeliveryServiceGrpcKt.DeliveryServiceCoroutineImplBa
     ) {
         if (value.isBlank()) {
             throw StatusRuntimeException(Status.INVALID_ARGUMENT.withDescription("$fieldName is required"))
+        }
+    }
+
+    private fun validateUUID(
+        value: String,
+        fieldName: String,
+    ) {
+        try {
+            UUID.fromString(value)
+        } catch (_: IllegalArgumentException) {
+            throw StatusRuntimeException(
+                Status.INVALID_ARGUMENT.withDescription("$fieldName is not a valid UUID: $value"),
+            )
         }
     }
 }

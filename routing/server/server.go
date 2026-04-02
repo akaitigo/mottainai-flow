@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/akaitigo/mottainai-flow/routing/solver"
 	"github.com/akaitigo/mottainai-flow/routing/solver/distance"
@@ -22,21 +23,33 @@ const (
 	// MaxWaypoints is the maximum number of waypoints allowed per route optimization request.
 	// Exceeding this limit results in InvalidArgument to prevent computational DoS.
 	MaxWaypoints = 50
+
+	// maxCachedRoutes is the maximum number of route results to cache in memory.
+	maxCachedRoutes = 10000
+
+	// routeCacheTTL is the time-to-live for cached route results.
+	routeCacheTTL = 30 * time.Minute
 )
+
+// routeEntry holds a cached route result with expiration.
+type routeEntry struct {
+	response  *pb.OptimizeRouteResponse
+	expiresAt time.Time
+}
 
 // RoutingServer implements the RoutingService gRPC interface.
 type RoutingServer struct {
 	pb.UnimplementedRoutingServiceServer
 	solver solver.Solver
 	mu     sync.RWMutex
-	routes map[string]*pb.OptimizeRouteResponse
+	routes map[string]routeEntry
 }
 
 // NewRoutingServer creates a new RoutingServer.
 func NewRoutingServer() *RoutingServer {
 	return &RoutingServer{
 		solver: solver.NewSolver(),
-		routes: make(map[string]*pb.OptimizeRouteResponse),
+		routes: make(map[string]routeEntry),
 	}
 }
 
@@ -86,10 +99,47 @@ func (s *RoutingServer) OptimizeRoute(
 	resp := buildResponse(req.GetRouteId(), solution, depot)
 
 	s.mu.Lock()
-	s.routes[req.GetRouteId()] = resp
+	// Evict expired entries and enforce max capacity before inserting.
+	s.evictExpiredLocked()
+	if len(s.routes) >= maxCachedRoutes {
+		s.evictOldestLocked()
+	}
+	s.routes[req.GetRouteId()] = routeEntry{
+		response:  resp,
+		expiresAt: time.Now().Add(routeCacheTTL),
+	}
 	s.mu.Unlock()
 
 	return resp, nil
+}
+
+// evictExpiredLocked removes all expired entries. Caller must hold s.mu write lock.
+func (s *RoutingServer) evictExpiredLocked() {
+	now := time.Now()
+	for key, entry := range s.routes {
+		if now.After(entry.expiresAt) {
+			delete(s.routes, key)
+		}
+	}
+}
+
+// evictOldestLocked removes the entry with the earliest expiresAt. Caller must hold s.mu write lock.
+func (s *RoutingServer) evictOldestLocked() {
+	var oldestKey string
+	var oldestTime time.Time
+	first := true
+
+	for key, entry := range s.routes {
+		if first || entry.expiresAt.Before(oldestTime) {
+			oldestKey = key
+			oldestTime = entry.expiresAt
+			first = false
+		}
+	}
+
+	if !first {
+		delete(s.routes, oldestKey)
+	}
 }
 
 // GetRouteStatus retrieves the status and result of a route computation.
@@ -102,10 +152,10 @@ func (s *RoutingServer) GetRouteStatus(
 	}
 
 	s.mu.RLock()
-	result, exists := s.routes[req.GetRouteId()]
+	entry, exists := s.routes[req.GetRouteId()]
 	s.mu.RUnlock()
 
-	if !exists {
+	if !exists || time.Now().After(entry.expiresAt) {
 		return &pb.GetRouteStatusResponse{
 			RouteId: req.GetRouteId(),
 			Status:  pb.RouteStatus_ROUTE_STATUS_UNSPECIFIED,
@@ -114,8 +164,8 @@ func (s *RoutingServer) GetRouteStatus(
 
 	return &pb.GetRouteStatusResponse{
 		RouteId: req.GetRouteId(),
-		Status:  result.GetStatus(),
-		Result:  result,
+		Status:  entry.response.GetStatus(),
+		Result:  entry.response,
 	}, nil
 }
 

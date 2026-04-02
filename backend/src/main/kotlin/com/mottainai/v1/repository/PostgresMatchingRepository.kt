@@ -26,17 +26,7 @@ class PostgresMatchingRepository : MatchingRepository {
     ) {
         val json = JsonFormat.printer().print(response)
         val now = Timestamp.from(Instant.now())
-        val exists =
-            JdbcHelper.queryCount(
-                dataSource,
-                "SELECT COUNT(*) FROM match_results WHERE id = ?",
-            ) { it.setString(1, matchId) }
-
-        if (exists > 0) {
-            updateExisting(matchId, response.status.number.toShort(), json, now)
-        } else {
-            insertNew(matchId, response.status.number.toShort(), json, now)
-        }
+        upsert(matchId, response.status.number.toShort(), json, now)
     }
 
     override fun findById(matchId: String): RunMatchingResponse? =
@@ -51,30 +41,23 @@ class PostgresMatchingRepository : MatchingRepository {
             builder.build()
         }
 
+    /**
+     * Atomic MERGE to avoid the SELECT COUNT + INSERT/UPDATE race condition.
+     * Uses standard SQL MERGE which is supported by both PostgreSQL and H2.
+     */
     @Suppress("MagicNumber")
-    private fun updateExisting(
+    private fun upsert(
         matchId: String,
         status: Short,
         json: String,
         now: Timestamp,
     ) {
-        val sql = "UPDATE match_results SET status = ?, result_json = ?, updated_at = ? WHERE id = ?"
-        JdbcHelper.execute(dataSource, sql) { stmt ->
-            stmt.setShort(1, status)
-            stmt.setString(2, json)
-            stmt.setTimestamp(3, now)
-            stmt.setString(4, matchId)
-        }
-    }
-
-    @Suppress("MagicNumber")
-    private fun insertNew(
-        matchId: String,
-        status: Short,
-        json: String,
-        now: Timestamp,
-    ) {
-        val sql = "INSERT INTO match_results (id, status, result_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?)"
+        val sql =
+            """
+            MERGE INTO match_results (id, status, result_json, created_at, updated_at)
+            KEY (id)
+            VALUES (?, ?, ?, ?, ?)
+            """.trimIndent()
         JdbcHelper.execute(dataSource, sql) { stmt ->
             stmt.setString(1, matchId)
             stmt.setShort(2, status)
