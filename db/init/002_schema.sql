@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS supplies (
     city VARCHAR(50),
     street VARCHAR(200),
     location GEOGRAPHY(POINT, 4326),
+    latitude DOUBLE PRECISION DEFAULT 0.0,
+    longitude DOUBLE PRECISION DEFAULT 0.0,
     status SMALLINT NOT NULL DEFAULT 1,
     description TEXT DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -39,6 +41,8 @@ CREATE TABLE IF NOT EXISTS demands (
     city VARCHAR(50),
     street VARCHAR(200),
     location GEOGRAPHY(POINT, 4326),
+    latitude DOUBLE PRECISION DEFAULT 0.0,
+    longitude DOUBLE PRECISION DEFAULT 0.0,
     status SMALLINT NOT NULL DEFAULT 1,
     description TEXT DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -74,3 +78,12 @@ CREATE TABLE IF NOT EXISTS deliveries (
 CREATE INDEX IF NOT EXISTS idx_deliveries_match ON deliveries (match_id);
 CREATE INDEX IF NOT EXISTS idx_deliveries_status ON deliveries (status);
 CREATE INDEX IF NOT EXISTS idx_deliveries_driver ON deliveries (driver_id);
+
+-- match_results table: stores matching execution results
+CREATE TABLE IF NOT EXISTS match_results (
+    id VARCHAR(100) PRIMARY KEY,
+    status SMALLINT NOT NULL DEFAULT 0,
+    result_json TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
