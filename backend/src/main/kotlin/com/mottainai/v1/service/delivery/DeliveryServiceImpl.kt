@@ -36,7 +36,8 @@ class DeliveryServiceImpl : DeliveryServiceGrpcKt.DeliveryServiceCoroutineImplBa
         validateUUID(request.deliveryId, "delivery_id")
 
         val entity = getDelivery(request.deliveryId)
-        requireTransition(entity.status, DeliveryStatus.DELIVERY_STATUS_PICKED_UP)
+        val previousStatus = entity.status
+        requireTransition(previousStatus, DeliveryStatus.DELIVERY_STATUS_PICKED_UP)
 
         val updated =
             entity.copy(
@@ -49,7 +50,13 @@ class DeliveryServiceImpl : DeliveryServiceGrpcKt.DeliveryServiceCoroutineImplBa
                 notes = request.notes,
                 updatedAt = Instant.now(),
             )
-        deliveryRepository.update(updated)
+        if (!deliveryRepository.update(updated, previousStatus)) {
+            throw StatusRuntimeException(
+                Status.ABORTED.withDescription(
+                    "Delivery ${request.deliveryId} was concurrently modified. Please retry.",
+                ),
+            )
+        }
 
         return ConfirmPickupResponse.newBuilder().setRecord(DeliveryMapper.toProto(updated)).build()
     }
@@ -71,7 +78,8 @@ class DeliveryServiceImpl : DeliveryServiceGrpcKt.DeliveryServiceCoroutineImplBa
             )
         }
 
-        requireTransition(entity.status, DeliveryStatus.DELIVERY_STATUS_DELIVERED)
+        val previousStatus = entity.status
+        requireTransition(previousStatus, DeliveryStatus.DELIVERY_STATUS_DELIVERED)
 
         val updated =
             entity.copy(
@@ -83,7 +91,13 @@ class DeliveryServiceImpl : DeliveryServiceGrpcKt.DeliveryServiceCoroutineImplBa
                 notes = request.notes,
                 updatedAt = Instant.now(),
             )
-        deliveryRepository.update(updated)
+        if (!deliveryRepository.update(updated, previousStatus)) {
+            throw StatusRuntimeException(
+                Status.ABORTED.withDescription(
+                    "Delivery ${request.deliveryId} was concurrently modified. Please retry.",
+                ),
+            )
+        }
 
         return ConfirmDeliveryResponse.newBuilder().setRecord(DeliveryMapper.toProto(updated)).build()
     }

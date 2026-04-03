@@ -2,6 +2,8 @@ package com.mottainai.v1.service
 
 import com.mottainai.v1.Address
 import com.mottainai.v1.GeoLocation
+import io.grpc.Status
+import io.grpc.StatusRuntimeException
 import jakarta.enterprise.context.ApplicationScoped
 
 /**
@@ -14,7 +16,7 @@ import jakarta.enterprise.context.ApplicationScoped
 class GeocodingService {
     /**
      * Geocodes an address and returns a new Address with the location populated.
-     * Falls back to a default Tokyo coordinate if the address is not recognized.
+     * Throws INVALID_ARGUMENT if the address cannot be resolved.
      */
     fun geocode(address: Address): Address {
         val location = lookupCoordinates(address.prefecture, address.city)
@@ -38,11 +40,15 @@ class GeocodingService {
     }
 
     private fun getPrefectureCenter(prefecture: String): Pair<Double, Double> =
-        PREFECTURE_CENTERS[prefecture] ?: DEFAULT_LOCATION
+        PREFECTURE_CENTERS[prefecture]
+            ?: throw StatusRuntimeException(
+                Status.INVALID_ARGUMENT.withDescription(
+                    "Cannot geocode address: unsupported prefecture '$prefecture'. " +
+                        "Supported: ${PREFECTURE_CENTERS.keys.joinToString()}",
+                ),
+            )
 
     companion object {
-        private val DEFAULT_LOCATION = Pair(35.6812, 139.7671) // Tokyo Station
-
         private val KNOWN_LOCATIONS =
             mapOf(
                 "東京都千代田区" to Pair(35.6940, 139.7536),

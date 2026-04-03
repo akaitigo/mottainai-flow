@@ -3,7 +3,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -ldflags "-s -w" -o /routing ./...
+RUN CGO_ENABLED=0 go build -ldflags "-s -w" -o /routing .
 
 FROM alpine:3.20
 RUN apk --no-cache add ca-certificates

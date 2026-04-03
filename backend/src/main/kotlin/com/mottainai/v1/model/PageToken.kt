@@ -1,5 +1,7 @@
 package com.mottainai.v1.model
 
+import io.grpc.Status
+import io.grpc.StatusRuntimeException
 import java.time.Instant
 import java.util.Base64
 
@@ -21,31 +23,41 @@ data class PageToken(
         private const val COLON_SEPARATOR = ":"
         private const val EXPECTED_PARTS = 2
 
+        /**
+         * Decodes a page token string. Returns null for blank tokens.
+         * Throws INVALID_ARGUMENT for non-blank but malformed tokens.
+         */
         fun decode(token: String): PageToken? {
             if (token.isBlank()) return null
-            return runCatching { parseToken(token) }.getOrNull()
+            return parseToken(token)
+                ?: throw StatusRuntimeException(
+                    Status.INVALID_ARGUMENT.withDescription(
+                        "Invalid page_token: token is malformed or corrupted",
+                    ),
+                )
         }
 
-        private fun parseToken(token: String): PageToken? {
-            val raw = String(Base64.getUrlDecoder().decode(token))
-            val parts =
-                raw
-                    .split(PIPE_SEPARATOR, limit = EXPECTED_PARTS)
-                    .takeIf { it.size == EXPECTED_PARTS }
-            val timeParts =
-                parts
-                    ?.get(0)
-                    ?.split(COLON_SEPARATOR, limit = EXPECTED_PARTS)
-                    ?.takeIf { it.size == EXPECTED_PARTS }
-            val seconds = timeParts?.get(0)?.toLongOrNull()
-            val nanos = timeParts?.get(1)?.toIntOrNull()
-            val tokenId = parts?.get(1)
+        private fun parseToken(token: String): PageToken? =
+            runCatching {
+                val raw = String(Base64.getUrlDecoder().decode(token))
+                val parts =
+                    raw
+                        .split(PIPE_SEPARATOR, limit = EXPECTED_PARTS)
+                        .takeIf { it.size == EXPECTED_PARTS }
+                val timeParts =
+                    parts
+                        ?.get(0)
+                        ?.split(COLON_SEPARATOR, limit = EXPECTED_PARTS)
+                        ?.takeIf { it.size == EXPECTED_PARTS }
+                val seconds = timeParts?.get(0)?.toLongOrNull()
+                val nanos = timeParts?.get(1)?.toIntOrNull()
+                val tokenId = parts?.get(1)
 
-            return if (seconds != null && nanos != null && tokenId != null) {
-                PageToken(Instant.ofEpochSecond(seconds, nanos.toLong()), tokenId)
-            } else {
-                null
-            }
-        }
+                if (seconds != null && nanos != null && tokenId != null) {
+                    PageToken(Instant.ofEpochSecond(seconds, nanos.toLong()), tokenId)
+                } else {
+                    null
+                }
+            }.getOrNull()
     }
 }

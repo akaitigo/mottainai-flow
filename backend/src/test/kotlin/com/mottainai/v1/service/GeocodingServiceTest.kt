@@ -1,7 +1,9 @@
 package com.mottainai.v1.service
 
 import com.mottainai.v1.Address
+import io.grpc.StatusRuntimeException
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
 class GeocodingServiceTest {
@@ -62,7 +64,7 @@ class GeocodingServiceTest {
     }
 
     @Test
-    fun `unknown prefecture falls back to default Tokyo`() {
+    fun `unknown prefecture throws INVALID_ARGUMENT`() {
         val address =
             Address
                 .newBuilder()
@@ -72,11 +74,9 @@ class GeocodingServiceTest {
                 .setStreet("おもろまち1-1-1")
                 .build()
 
-        val result = service.geocode(address)
-
-        // Falls back to default (Tokyo Station)
-        assertThat(result.location.latitude).isEqualTo(35.6812)
-        assertThat(result.location.longitude).isEqualTo(139.7671)
+        assertThatThrownBy { service.geocode(address) }
+            .isInstanceOf(StatusRuntimeException::class.java)
+            .hasMessageContaining("unsupported prefecture")
     }
 
     @Test

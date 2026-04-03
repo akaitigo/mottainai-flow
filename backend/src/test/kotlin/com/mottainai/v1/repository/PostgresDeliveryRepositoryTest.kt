@@ -132,7 +132,8 @@ class PostgresDeliveryRepositoryTest {
                     notes = "Picked up successfully",
                     updatedAt = Instant.now(),
                 )
-            repository.update(updated)
+            val success = repository.update(updated, DeliveryStatus.DELIVERY_STATUS_PENDING)
+            assertThat(success).isTrue()
 
             val found = repository.findById(entity.id.toString())
             assertThat(found).isNotNull
@@ -144,6 +145,27 @@ class PostgresDeliveryRepositoryTest {
             assertThat(found.pickupCondition).isEqualTo("Good")
             assertThat(found.pickupAt).isNotNull
             assertThat(found.notes).isEqualTo("Picked up successfully")
+        }
+
+        @Test
+        fun `update fails when expected status does not match`() {
+            val entity = createDeliveryEntity()
+            repository.insert(entity)
+
+            val updated =
+                entity.copy(
+                    driverId = "driver-1",
+                    status = DeliveryStatus.DELIVERY_STATUS_PICKED_UP,
+                    updatedAt = Instant.now(),
+                )
+            // Entity is PENDING, but we claim it should be PICKED_UP -> must fail
+            val success = repository.update(updated, DeliveryStatus.DELIVERY_STATUS_PICKED_UP)
+            assertThat(success).isFalse()
+
+            // Verify state unchanged
+            val found = repository.findById(entity.id.toString())
+            requireNotNull(found)
+            assertThat(found.status).isEqualTo(DeliveryStatus.DELIVERY_STATUS_PENDING)
         }
 
         @Test
@@ -161,7 +183,7 @@ class PostgresDeliveryRepositoryTest {
                     pickupAt = Instant.now(),
                     updatedAt = Instant.now(),
                 )
-            repository.update(afterPickup)
+            assertThat(repository.update(afterPickup, DeliveryStatus.DELIVERY_STATUS_PENDING)).isTrue()
 
             // Delivery
             val afterDelivery =
@@ -172,7 +194,7 @@ class PostgresDeliveryRepositoryTest {
                     deliveryAt = Instant.now(),
                     updatedAt = Instant.now(),
                 )
-            repository.update(afterDelivery)
+            assertThat(repository.update(afterDelivery, DeliveryStatus.DELIVERY_STATUS_PICKED_UP)).isTrue()
 
             val found = repository.findById(entity.id.toString())
             assertThat(found).isNotNull

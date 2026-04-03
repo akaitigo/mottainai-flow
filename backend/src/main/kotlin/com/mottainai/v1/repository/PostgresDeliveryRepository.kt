@@ -6,6 +6,7 @@ import io.agroal.api.AgroalDataSource
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.transaction.Transactional
+import org.jboss.logging.Logger
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.Timestamp
@@ -19,6 +20,8 @@ import java.util.UUID
 class PostgresDeliveryRepository : DeliveryRepository {
     @Inject
     lateinit var dataSource: AgroalDataSource
+
+    private val log: Logger = Logger.getLogger(PostgresDeliveryRepository::class.java)
 
     @Transactional
     override fun insert(entity: DeliveryEntity): DeliveryEntity {
@@ -48,7 +51,10 @@ class PostgresDeliveryRepository : DeliveryRepository {
         ) { rs -> mapRow(rs) }
 
     @Transactional
-    override fun update(entity: DeliveryEntity): DeliveryEntity {
+    override fun update(
+        entity: DeliveryEntity,
+        expectedStatus: DeliveryStatus,
+    ): Boolean {
         val sql =
             """
             UPDATE deliveries SET
@@ -58,13 +64,25 @@ class PostgresDeliveryRepository : DeliveryRepository {
                 pickup_condition = ?, delivery_condition = ?,
                 pickup_at = ?, delivery_at = ?,
                 notes = ?, updated_at = ?
-            WHERE id = ?
+            WHERE id = ? AND status = ?
             """.trimIndent()
 
-        JdbcHelper.execute(dataSource, sql) { stmt ->
-            setUpdateParams(stmt, entity)
+        val rowsUpdated =
+            dataSource.connection.use { conn ->
+                conn.prepareStatement(sql).use { stmt ->
+                    setUpdateParams(stmt, entity, expectedStatus)
+                    stmt.executeUpdate()
+                }
+            }
+
+        if (rowsUpdated == 0) {
+            log.warnf(
+                "Optimistic lock failed for delivery %s: expected status %s",
+                entity.id,
+                expectedStatus,
+            )
         }
-        return entity
+        return rowsUpdated > 0
     }
 
     @Suppress("MagicNumber")
@@ -95,6 +113,7 @@ class PostgresDeliveryRepository : DeliveryRepository {
     private fun setUpdateParams(
         stmt: PreparedStatement,
         entity: DeliveryEntity,
+        expectedStatus: DeliveryStatus,
     ) {
         stmt.setString(1, entity.driverId)
         stmt.setShort(2, entity.status.number.toShort())
@@ -109,6 +128,7 @@ class PostgresDeliveryRepository : DeliveryRepository {
         stmt.setString(11, entity.notes)
         stmt.setTimestamp(12, Timestamp.from(entity.updatedAt))
         stmt.setObject(13, entity.id)
+        stmt.setShort(14, expectedStatus.number.toShort())
     }
 
     private fun mapRow(rs: ResultSet): DeliveryEntity =

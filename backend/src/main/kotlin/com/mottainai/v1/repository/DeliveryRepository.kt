@@ -1,5 +1,6 @@
 package com.mottainai.v1.repository
 
+import com.mottainai.v1.DeliveryStatus
 import com.mottainai.v1.service.delivery.DeliveryEntity
 
 /**
@@ -11,5 +12,14 @@ interface DeliveryRepository {
 
     fun findById(id: String): DeliveryEntity?
 
-    fun update(entity: DeliveryEntity): DeliveryEntity
+    /**
+     * Updates a delivery record with optimistic locking.
+     * @param entity the updated entity to persist
+     * @param expectedStatus the status the row must currently have; prevents race conditions
+     * @return true if exactly one row was updated, false if the precondition failed
+     */
+    fun update(
+        entity: DeliveryEntity,
+        expectedStatus: DeliveryStatus,
+    ): Boolean
 }

@@ -1,6 +1,8 @@
 package com.mottainai.v1.model
 
+import io.grpc.StatusRuntimeException
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import java.time.Instant
 
@@ -15,8 +17,9 @@ class PageTokenTest {
         val decoded = PageToken.decode(encoded)
 
         assertThat(decoded).isNotNull
-        assertThat(decoded?.createdAt).isEqualTo(now)
-        assertThat(decoded?.id).isEqualTo(id)
+        requireNotNull(decoded)
+        assertThat(decoded.createdAt).isEqualTo(now)
+        assertThat(decoded.id).isEqualTo(id)
     }
 
     @Test
@@ -26,18 +29,22 @@ class PageTokenTest {
     }
 
     @Test
-    fun `decode returns null for invalid base64`() {
-        assertThat(PageToken.decode("not-valid-token!!!")).isNull()
+    fun `decode throws INVALID_ARGUMENT for invalid base64`() {
+        assertThatThrownBy { PageToken.decode("not-valid-token!!!") }
+            .isInstanceOf(StatusRuntimeException::class.java)
+            .hasMessageContaining("Invalid page_token")
     }
 
     @Test
-    fun `decode returns null for malformed content`() {
+    fun `decode throws INVALID_ARGUMENT for malformed content`() {
         val encoded =
             java.util.Base64
                 .getUrlEncoder()
                 .withoutPadding()
                 .encodeToString("malformed-content".toByteArray())
-        assertThat(PageToken.decode(encoded)).isNull()
+        assertThatThrownBy { PageToken.decode(encoded) }
+            .isInstanceOf(StatusRuntimeException::class.java)
+            .hasMessageContaining("Invalid page_token")
     }
 
     @Test
@@ -68,7 +75,8 @@ class PageTokenTest {
         val decoded = PageToken.decode(token.encode())
 
         assertThat(decoded).isNotNull
-        assertThat(decoded?.createdAt?.epochSecond).isEqualTo(1711800000L)
-        assertThat(decoded?.createdAt?.nano).isEqualTo(123456789)
+        requireNotNull(decoded)
+        assertThat(decoded.createdAt.epochSecond).isEqualTo(1711800000L)
+        assertThat(decoded.createdAt.nano).isEqualTo(123456789)
     }
 }
