@@ -42,8 +42,8 @@ class PostgresMatchingRepository : MatchingRepository {
         }
 
     /**
-     * Atomic MERGE to avoid the SELECT COUNT + INSERT/UPDATE race condition.
-     * Uses standard SQL MERGE which is supported by both PostgreSQL and H2.
+     * Atomic upsert using standard SQL MERGE (PostgreSQL 15+, H2 2.x).
+     * Avoids the SELECT COUNT + INSERT/UPDATE race condition.
      */
     @Suppress("MagicNumber")
     private fun upsert(
@@ -54,9 +54,15 @@ class PostgresMatchingRepository : MatchingRepository {
     ) {
         val sql =
             """
-            MERGE INTO match_results (id, status, result_json, created_at, updated_at)
-            KEY (id)
-            VALUES (?, ?, ?, ?, ?)
+            MERGE INTO match_results AS target
+            USING (VALUES (?, ?, ?, ?, ?)) AS source (id, status, result_json, created_at, updated_at)
+            ON target.id = source.id
+            WHEN MATCHED THEN UPDATE SET
+                status = source.status,
+                result_json = source.result_json,
+                updated_at = source.updated_at
+            WHEN NOT MATCHED THEN INSERT (id, status, result_json, created_at, updated_at)
+                VALUES (source.id, source.status, source.result_json, source.created_at, source.updated_at)
             """.trimIndent()
         JdbcHelper.execute(dataSource, sql) { stmt ->
             stmt.setString(1, matchId)
